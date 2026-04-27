@@ -6,10 +6,13 @@
   <style>
       body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 
-      #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
-      #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
+      #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; min-height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
+      #input { border: none; padding: 0.5rem 1rem; flex-grow: 1; border-radius: 1rem; margin: 0.25rem; resize: none; font-family: inherit; font-size: 1rem; line-height: 1.4; max-height: 8rem; overflow-y: auto; }
       #input:focus { outline: none; }
-      #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; }
+      #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; height: 2.5rem; }
+      #char-count { font-size: 0.72rem; color: #888; padding: 0 0.4rem; white-space: nowrap; }
+      #char-count.warn { color: #e07b00; }
+      #char-count.danger { color: #c0392b; }
 
       #messages { list-style-type: none; margin: 0; padding: 0; }
       #messages > li { padding: 0.5rem 1rem; }
@@ -26,7 +29,9 @@
   <ul id="messages"></ul>
   <div id="typing"></div>
   <form id="form" action="">
-    <input id="input" autocomplete="off" placeholder="Mensagem..." /><button>Enviar</button>
+    <textarea id="input" autocomplete="off" placeholder="Mensagem... (Enter para enviar, Shift+Enter para nova linha)" rows="1"></textarea>
+    <span id="char-count">500</span>
+    <button type="submit">Enviar</button>
   </form>
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -48,6 +53,33 @@
     const messages = document.getElementById('messages');
     const typingEl = document.getElementById('typing');
     const userCountEl = document.getElementById('user-count');
+    const charCountEl = document.getElementById('char-count');
+
+    const MAX = 500;
+
+    function updateCharCount() {
+      const remaining = MAX - input.value.length;
+      charCountEl.textContent = remaining;
+      charCountEl.className = remaining < 0 ? 'danger' : remaining < 100 ? 'warn' : '';
+    }
+
+    function autoResize() {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 128) + 'px';
+    }
+
+    function sendMessage() {
+      const msg = input.value;
+      if (msg.trim()) {
+        clearTimeout(typingTimeout);
+        socket.emit('stop typing');
+        const clientOffset = `${socket.id}-${counter++}`;
+        socket.emit('chat message', msg, clientOffset);
+        input.value = '';
+        updateCharCount();
+        autoResize();
+      }
+    }
 
     socket.on('system message', (text) => {
       const item = document.createElement('li');
@@ -63,20 +95,23 @@
 
     let typingTimeout;
     input.addEventListener('input', () => {
+      updateCharCount();
+      autoResize();
       socket.emit('typing');
       clearTimeout(typingTimeout);
       typingTimeout = setTimeout(() => socket.emit('stop typing'), 2000);
     });
 
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      if (input.value) {
-        clearTimeout(typingTimeout);
-        socket.emit('stop typing');
-        const clientOffset = `${socket.id}-${counter++}`;
-        socket.emit('chat message', input.value, clientOffset);
-        input.value = '';
-      }
+      sendMessage();
     });
 
     const typingUsers = new Set();
