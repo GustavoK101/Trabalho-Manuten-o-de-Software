@@ -47,6 +47,9 @@ if (cluster.isPrimary) {
 
   io.on('connection', async (socket) => {
     socket.on('chat message', async (msg, clientOffset, callback) => {
+      if (typeof msg !== 'string' || msg.trim().length === 0 || msg.length > 500) {
+        return callback({ error: 'invalid message' });
+      }
       let result;
       try {
         result = await db.run('INSERT INTO messages (content, client_offset) VALUES (?, ?)', msg, clientOffset);
