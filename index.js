@@ -51,10 +51,10 @@ if (cluster.isPrimary) {
       try {
         result = await db.run('INSERT INTO messages (content, client_offset) VALUES (?, ?)', msg, clientOffset);
       } catch (e) {
-        if (e.errno === 19 /* SQLITE_CONSTRAINT */ ) {
+        if (e.code === 'SQLITE_CONSTRAINT') {
           callback();
         } else {
-          // nothing to do, just let the client retry
+          console.error('DB insert error:', e);
         }
         return;
       }
@@ -71,7 +71,7 @@ if (cluster.isPrimary) {
           }
         )
       } catch (e) {
-        // something went wrong
+        console.error('Message recovery error:', e);
       }
     }
   });
