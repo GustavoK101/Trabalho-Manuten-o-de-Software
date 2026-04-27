@@ -23,7 +23,8 @@ export function registerChatHandlers(io, socket, db) {
       return;
     }
 
-    io.emit('chat message', username, msg, result.lastID);
+    const row = await db.get('SELECT created_at FROM messages WHERE id = ?', result.lastID);
+    io.emit('chat message', username, msg, result.lastID, row.created_at);
     callback();
   });
 
@@ -43,10 +44,10 @@ export function registerChatHandlers(io, socket, db) {
 async function recoverMessages(socket, db) {
   try {
     await db.each(
-      'SELECT id, content, username FROM messages WHERE id > ?',
+      'SELECT id, content, username, created_at FROM messages WHERE id > ?',
       [socket.handshake.auth.serverOffset || 0],
       (_err, row) => {
-        socket.emit('chat message', row.username, row.content, row.id);
+        socket.emit('chat message', row.username, row.content, row.id, row.created_at);
       }
     );
   } catch (e) {
