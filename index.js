@@ -31,8 +31,14 @@ if (cluster.isPrimary) {
     res.sendFile(join(__dirname, 'index.html'));
   });
 
+  function broadcastUserCount() {
+    io.emit('user count', io.engine.clientsCount);
+  }
+
   io.on('connection', (socket) => {
+    broadcastUserCount();
     registerChatHandlers(io, socket, db);
+    socket.on('disconnect', broadcastUserCount);
   });
 
   const port = process.env.PORT || 3000;
