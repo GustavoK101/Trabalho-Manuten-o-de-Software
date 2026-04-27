@@ -1,4 +1,6 @@
 export function registerChatHandlers(io, socket, db) {
+  const username = socket.handshake.auth.username?.trim().slice(0, 30) || 'Anônimo';
+
   socket.on('chat message', async (msg, clientOffset, callback) => {
     if (typeof msg !== 'string' || msg.trim().length === 0 || msg.length > 500) {
       return callback({ error: 'invalid message' });
@@ -7,9 +9,10 @@ export function registerChatHandlers(io, socket, db) {
     let result;
     try {
       result = await db.run(
-        'INSERT INTO messages (content, client_offset) VALUES (?, ?)',
+        'INSERT INTO messages (content, client_offset, username) VALUES (?, ?, ?)',
         msg,
-        clientOffset
+        clientOffset,
+        username
       );
     } catch (e) {
       if (e.code === 'SQLITE_CONSTRAINT') {
@@ -20,7 +23,7 @@ export function registerChatHandlers(io, socket, db) {
       return;
     }
 
-    io.emit('chat message', msg, result.lastID);
+    io.emit('chat message', username, msg, result.lastID);
     callback();
   });
 
@@ -32,10 +35,10 @@ export function registerChatHandlers(io, socket, db) {
 async function recoverMessages(socket, db) {
   try {
     await db.each(
-      'SELECT id, content FROM messages WHERE id > ?',
+      'SELECT id, content, username FROM messages WHERE id > ?',
       [socket.handshake.auth.serverOffset || 0],
       (_err, row) => {
-        socket.emit('chat message', row.content, row.id);
+        socket.emit('chat message', row.username, row.content, row.id);
       }
     );
   } catch (e) {

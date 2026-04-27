@@ -14,20 +14,24 @@
       #messages { list-style-type: none; margin: 0; padding: 0; }
       #messages > li { padding: 0.5rem 1rem; }
       #messages > li:nth-child(odd) { background: #efefef; }
+      .username { font-weight: bold; margin-right: 0.4rem; }
   </style>
 </head>
 <body>
   <ul id="messages"></ul>
   <form id="form" action="">
-    <input id="input" autocomplete="off" /><button>Send</button>
+    <input id="input" autocomplete="off" placeholder="Mensagem..." /><button>Enviar</button>
   </form>
   <script src="/socket.io/socket.io.js"></script>
   <script>
     let counter = 0;
 
+    const username = (prompt('Seu nome:') || 'Anônimo').trim().slice(0, 30);
+
     const socket = io({
       auth: {
-        serverOffset: 0
+        serverOffset: 0,
+        username
       },
       ackTimeout: 10000,
       retries: 3,
@@ -46,9 +50,13 @@
       }
     });
 
-    socket.on('chat message', (msg, serverOffset) => {
+    socket.on('chat message', (user, msg, serverOffset) => {
       const item = document.createElement('li');
-      item.textContent = msg;
+      const name = document.createElement('span');
+      name.className = 'username';
+      name.textContent = user + ':';
+      item.appendChild(name);
+      item.appendChild(document.createTextNode(msg));
       messages.appendChild(item);
       window.scrollTo(0, document.body.scrollHeight);
       socket.auth.serverOffset = serverOffset;
