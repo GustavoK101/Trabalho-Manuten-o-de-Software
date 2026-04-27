@@ -27,6 +27,14 @@ export function registerChatHandlers(io, socket, db) {
     callback();
   });
 
+  socket.on('typing', () => {
+    socket.broadcast.emit('typing', username);
+  });
+
+  socket.on('stop typing', () => {
+    socket.broadcast.emit('stop typing', username);
+  });
+
   if (!socket.recovered) {
     recoverMessages(socket, db);
   }

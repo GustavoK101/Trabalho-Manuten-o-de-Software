@@ -15,10 +15,12 @@
       #messages > li { padding: 0.5rem 1rem; }
       #messages > li:nth-child(odd) { background: #efefef; }
       .username { font-weight: bold; margin-right: 0.4rem; }
+      #typing { padding: 0.25rem 1rem; font-size: 0.8rem; color: #888; min-height: 1.2rem; }
   </style>
 </head>
 <body>
   <ul id="messages"></ul>
+  <div id="typing"></div>
   <form id="form" action="">
     <input id="input" autocomplete="off" placeholder="Mensagem..." /><button>Enviar</button>
   </form>
@@ -40,14 +42,34 @@
     const form = document.getElementById('form');
     const input = document.getElementById('input');
     const messages = document.getElementById('messages');
+    const typingEl = document.getElementById('typing');
+
+    let typingTimeout;
+    input.addEventListener('input', () => {
+      socket.emit('typing');
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => socket.emit('stop typing'), 2000);
+    });
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       if (input.value) {
+        clearTimeout(typingTimeout);
+        socket.emit('stop typing');
         const clientOffset = `${socket.id}-${counter++}`;
         socket.emit('chat message', input.value, clientOffset);
         input.value = '';
       }
+    });
+
+    const typingUsers = new Set();
+    socket.on('typing', (user) => {
+      typingUsers.add(user);
+      typingEl.textContent = [...typingUsers].join(', ') + ' está digitando...';
+    });
+    socket.on('stop typing', (user) => {
+      typingUsers.delete(user);
+      typingEl.textContent = typingUsers.size ? [...typingUsers].join(', ') + ' está digitando...' : '';
     });
 
     socket.on('chat message', (user, msg, serverOffset) => {
