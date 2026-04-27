@@ -18,6 +18,7 @@
       .timestamp { font-size: 0.72rem; color: #aaa; margin-left: 0.5rem; }
       #typing { padding: 0.25rem 1rem; font-size: 0.8rem; color: #888; min-height: 1.2rem; }
       #user-count { padding: 0.4rem 1rem; font-size: 0.8rem; color: #555; background: #f5f5f5; border-bottom: 1px solid #ddd; }
+      .system-msg { text-align: center; font-size: 0.78rem; color: #999; font-style: italic; padding: 0.3rem 0; }
   </style>
 </head>
 <body>
@@ -47,6 +48,14 @@
     const messages = document.getElementById('messages');
     const typingEl = document.getElementById('typing');
     const userCountEl = document.getElementById('user-count');
+
+    socket.on('system message', (text) => {
+      const item = document.createElement('li');
+      item.className = 'system-msg';
+      item.textContent = text;
+      messages.appendChild(item);
+      window.scrollTo(0, document.body.scrollHeight);
+    });
 
     socket.on('user count', (count) => {
       userCountEl.textContent = count === 1 ? '1 usuário online' : `${count} usuários online`;

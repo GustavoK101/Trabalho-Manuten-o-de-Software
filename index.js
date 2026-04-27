@@ -36,9 +36,14 @@ if (cluster.isPrimary) {
   }
 
   io.on('connection', (socket) => {
+    const username = socket.handshake.auth.username?.trim().slice(0, 30) || 'Anônimo';
     broadcastUserCount();
+    io.emit('system message', `${username} entrou no chat`);
     registerChatHandlers(io, socket, db);
-    socket.on('disconnect', broadcastUserCount);
+    socket.on('disconnect', () => {
+      broadcastUserCount();
+      io.emit('system message', `${username} saiu do chat`);
+    });
   });
 
   const port = process.env.PORT || 3000;
