@@ -12,6 +12,11 @@
   },
   "license": "MIT",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3",
+    "vitest": "^2.1.9"
   }
 }
