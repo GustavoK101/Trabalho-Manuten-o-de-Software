@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Apresentação — Chat em Tempo Real</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #111;
+      color: #eee;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Slides */
+    #deck { flex: 1; position: relative; overflow: hidden; }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 6rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      text-align: center;
+    }
+    .slide.active { opacity: 1; pointer-events: auto; }
+
+    /* Backgrounds per slide */
+    .slide:nth-child(1)  { background: linear-gradient(135deg, #1a1a2e, #16213e); }
+    .slide:nth-child(2)  { background: linear-gradient(135deg, #0f3460, #1a1a2e); }
+    .slide:nth-child(3)  { background: linear-gradient(135deg, #16213e, #0f3460); }
+    .slide:nth-child(4)  { background: linear-gradient(135deg, #1b1b2f, #162447); }
+    .slide:nth-child(5)  { background: linear-gradient(135deg, #162447, #1f4068); }
+    .slide:nth-child(6)  { background: linear-gradient(135deg, #1f4068, #1b262c); }
+    .slide:nth-child(7)  { background: linear-gradient(135deg, #1b262c, #0f3460); }
+    .slide:nth-child(8)  { background: linear-gradient(135deg, #0f3460, #1a1a2e); }
+    .slide:nth-child(9)  { background: linear-gradient(135deg, #1a1a2e, #162447); }
+    .slide:nth-child(10) { background: linear-gradient(135deg, #162447, #1a1a2e); }
+
+    /* Typography */
+    .tag {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #4fc3f7;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    h1 { font-size: 3.2rem; font-weight: 800; line-height: 1.1; margin-bottom: 1rem; }
+    h2 { font-size: 2.2rem; font-weight: 700; line-height: 1.2; margin-bottom: 1.2rem; color: #90caf9; }
+    p  { font-size: 1.15rem; color: #ccc; max-width: 720px; line-height: 1.7; }
+    .subtitle { font-size: 1.3rem; color: #90caf9; margin-bottom: 0.6rem; }
+    .accent { color: #4fc3f7; }
+
+    /* Lists */
+    ul.items {
+      list-style: none;
+      margin-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      text-align: left;
+      max-width: 680px;
+      width: 100%;
+    }
+    ul.items li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+      font-size: 1.05rem;
+      color: #ddd;
+      line-height: 1.5;
+    }
+    ul.items li .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.1rem; }
+    ul.items li strong { color: #fff; }
+
+    /* Two-column grid */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      margin-top: 1.8rem;
+      max-width: 820px;
+      width: 100%;
+      text-align: left;
+    }
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 1.1rem 1.3rem;
+    }
+    .card h4 { font-size: 0.95rem; color: #4fc3f7; margin-bottom: 0.4rem; font-weight: 700; letter-spacing: 0.03em; }
+    .card p  { font-size: 0.88rem; color: #bbb; max-width: none; line-height: 1.5; }
+
+    /* Code snippet */
+    pre {
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 1.2rem 1.5rem;
+      font-size: 0.88rem;
+      font-family: "SF Mono", "Fira Code", monospace;
+      color: #a5d6a7;
+      text-align: left;
+      max-width: 700px;
+      width: 100%;
+      margin-top: 1.5rem;
+      line-height: 1.6;
+      overflow-x: auto;
+    }
+    pre .kw  { color: #80cbc4; }
+    pre .str { color: #f48fb1; }
+    pre .cmt { color: #666; font-style: italic; }
+
+    /* Progress bar */
+    #progress {
+      height: 3px;
+      background: rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    #progress-bar {
+      height: 100%;
+      background: #4fc3f7;
+      transition: width 0.35s ease;
+    }
+
+    /* Nav */
+    #nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.7rem 2rem;
+      background: rgba(0,0,0,0.3);
+      flex-shrink: 0;
+    }
+    #nav button {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #eee;
+      padding: 0.45rem 1.4rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    #nav button:hover { background: rgba(255,255,255,0.15); }
+    #nav button:disabled { opacity: 0.3; cursor: default; }
+    #slide-counter { font-size: 0.85rem; color: #777; }
+
+    /* Divider */
+    .divider {
+      width: 60px;
+      height: 3px;
+      background: #4fc3f7;
+      border-radius: 2px;
+      margin: 1rem auto 1.5rem;
+    }
+
+    /* Big number */
+    .big-num {
+      font-size: 5rem;
+      font-weight: 800;
+      color: #4fc3f7;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+<div id="deck">
+
+  <!-- Slide 1: Capa -->
+  <div class="slide active">
+    <div class="tag">Manutenção de Software</div>
+    <h1>Chat em<br><span class="accent">Tempo Real</span></h1>
+    <div class="divider"></div>
+    <p>Da aplicação tutorial do Socket.IO a um sistema de chat completo — com testes, novas funcionalidades e arquitetura limpa.</p>
+  </div>
+
+  <!-- Slide 2: Contexto -->
+  <div class="slide">
+    <div class="tag">Ponto de Partida</div>
+    <h2>O que era o projeto?</h2>
+    <div class="divider"></div>
+    <p>O projeto original é o exemplo oficial do <strong>Socket.IO</strong> — um chat minimalista usado como material de tutorial.</p>
+    <ul class="items" style="margin-top:1.8rem;">
+      <li><span class="icon">📄</span><span><strong>2 arquivos:</strong> index.js (servidor) e index.html (cliente)</span></li>
+      <li><span class="icon">🗄️</span><span><strong>SQLite</strong> para persistência de mensagens</span></li>
+      <li><span class="icon">⚙️</span><span><strong>Node.js cluster</strong> para escalar em múltiplos núcleos</span></li>
+      <li><span class="icon">🔄</span><span><strong>Connection state recovery</strong> para reconectar sem perder histórico</span></li>
+    </ul>
+  </div>
+
+  <!-- Slide 3: Problemas identificados -->
+  <div class="slide">
+    <div class="tag">Análise Inicial</div>
+    <h2>Problemas encontrados</h2>
+    <div class="divider"></div>
+    <div class="grid">
+      <div class="card">
+        <h4>🐛 Verificação frágil de erro</h4>
+        <p>Comparava <code>e.errno === 19</code> em vez de usar <code>e.code === 'SQLITE_CONSTRAINT'</code>, que é estável.</p>
+      </div>
+      <div class="card">
+        <h4>🔇 Erros silenciados</h4>
+        <p>Blocos catch vazios: falhas no banco e na recuperação de mensagens eram descartadas sem log.</p>
+      </div>
+      <div class="card">
+        <h4>🚪 Porta sem fallback</h4>
+        <p><code>process.env.PORT</code> undefined causava <code>listen(undefined)</code> — porta aleatória sem aviso.</p>
+      </div>
+      <div class="card">
+        <h4>⚠️ Sem validação de entrada</h4>
+        <p>Qualquer payload (não-string, vazio, gigante) chegava ao banco sem verificação.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 4: Correções -->
+  <div class="slide">
+    <div class="tag">Correções</div>
+    <h2>Bugs corrigidos</h2>
+    <div class="divider"></div>
+    <pre><span class="cmt">// Antes</span>
+<span class="kw">if</span> (e.errno === <span class="str">19</span>) { callback(); }
+
+<span class="cmt">// Depois</span>
+<span class="kw">if</span> (e.code === <span class="str">'SQLITE_CONSTRAINT'</span>) { callback(); }
+<span class="kw">else</span> { console.error(<span class="str">'DB insert error:'</span>, e); }
+
+<span class="cmt">// Validação adicionada</span>
+<span class="kw">if</span> (<span class="kw">typeof</span> msg !== <span class="str">'string'</span> || msg.trim().length === <span class="str">0</span> || msg.length > <span class="str">500</span>) {
+  <span class="kw">return</span> callback({ error: <span class="str">'invalid message'</span> });
+}</pre>
+  </div>
+
+  <!-- Slide 5: Refatoração -->
+  <div class="slide">
+    <div class="tag">Refatoração</div>
+    <h2>Estrutura modular</h2>
+    <div class="divider"></div>
+    <p>O <code>index.js</code> acumulava responsabilidades demais. Separamos em módulos coesos:</p>
+    <ul class="items" style="margin-top:1.8rem;">
+      <li><span class="icon">🗃️</span><span><strong>db.js</strong> — abre conexão SQLite e cria tabelas</span></li>
+      <li><span class="icon">💬</span><span><strong>chat.js</strong> — registra todos os handlers de Socket.IO (mensagens, digitação)</span></li>
+      <li><span class="icon">🔌</span><span><strong>index.js</strong> — camada de montagem: cluster, servidor HTTP, Express e Socket.IO</span></li>
+    </ul>
+    <p style="margin-top:1.5rem; font-size:0.95rem;">Cada módulo tem uma única responsabilidade, facilitando testes e manutenção.</p>
+  </div>
+
+  <!-- Slide 6: Funcionalidades -->
+  <div class="slide">
+    <div class="tag">Novas Funcionalidades</div>
+    <h2>O que foi adicionado?</h2>
+    <div class="divider"></div>
+    <div class="grid">
+      <div class="card">
+        <h4>👤 Nomes de usuário</h4>
+        <p>Usuário escolhe um nome ao entrar. Persistido no banco e exibido em cada mensagem.</p>
+      </div>
+      <div class="card">
+        <h4>⌨️ Indicador de digitação</h4>
+        <p>Mostra "<em>João está digitando...</em>" para os outros usuários em tempo real.</p>
+      </div>
+      <div class="card">
+        <h4>🕐 Timestamp</h4>
+        <p>Horário de envio armazenado no banco (UTC) e exibido ao lado de cada mensagem.</p>
+      </div>
+      <div class="card">
+        <h4>🔔 Mensagens do sistema</h4>
+        <p>Avisa quando alguém entra ou sai do chat: <em>"Maria entrou no chat".</em></p>
+      </div>
+      <div class="card">
+        <h4>👥 Contagem de usuários</h4>
+        <p>Barra superior mostra quantos usuários estão conectados no momento.</p>
+      </div>
+      <div class="card">
+        <h4>✉️ Mensagens privadas</h4>
+        <p>Clique em um usuário na lista lateral para abrir uma conversa 1-a-1.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 7: UX -->
+  <div class="slide">
+    <div class="tag">Experiência do Usuário</div>
+    <h2>Melhorias de UX</h2>
+    <div class="divider"></div>
+    <ul class="items">
+      <li><span class="icon">📊</span><span><strong>Contador de caracteres</strong> — mostra quantos caracteres restam (amarelo &lt;100, vermelho &lt;0)</span></li>
+      <li><span class="icon">↩️</span><span><strong>Enter para enviar</strong> — Shift+Enter insere nova linha sem enviar</span></li>
+      <li><span class="icon">📐</span><span><strong>Textarea auto-redimensionável</strong> — cresce conforme o texto, até 8 linhas</span></li>
+      <li><span class="icon">🗂️</span><span><strong>Painel lateral de usuários</strong> — lista todos online; clique abre o chat privado</span></li>
+      <li><span class="icon">💬</span><span><strong>Painel de chat privado</strong> — flutuante, abre automaticamente ao receber mensagem privada</span></li>
+    </ul>
+  </div>
+
+  <!-- Slide 8: Testes -->
+  <div class="slide">
+    <div class="tag">Qualidade</div>
+    <h2>Testes automatizados</h2>
+    <div class="divider"></div>
+    <p>Suite de integração com <strong>Vitest</strong> + <strong>socket.io-client</strong> e SQLite in-memory.</p>
+    <div class="grid" style="margin-top:1.5rem;">
+      <div class="card">
+        <h4>💬 Mensagens</h4>
+        <p>Broadcast, timestamp, rejeição de vazio / &gt;500 chars / não-string, idempotência por offset.</p>
+      </div>
+      <div class="card">
+        <h4>⌨️ Digitação</h4>
+        <p>Eventos <code>typing</code> e <code>stop typing</code> chegam ao cliente correto.</p>
+      </div>
+      <div class="card">
+        <h4>🔔 Sistema</h4>
+        <p>Mensagens de entrada e saída são emitidas com o nome certo.</p>
+      </div>
+      <div class="card">
+        <h4>🔒 Privadas</h4>
+        <p>Mensagem chega só ao destino; terceiros não a recebem; vazio é ignorado.</p>
+      </div>
+    </div>
+    <p style="margin-top:1.2rem; font-size:0.9rem; color:#aaa;">✅ <strong>12 testes</strong>, todos passando</p>
+  </div>
+
+  <!-- Slide 9: Stack -->
+  <div class="slide">
+    <div class="tag">Tecnologia</div>
+    <h2>Stack utilizada</h2>
+    <div class="divider"></div>
+    <div class="grid">
+      <div class="card">
+        <h4>⚡ Socket.IO 4</h4>
+        <p>Comunicação bidirecional em tempo real com reconnect automático e state recovery.</p>
+      </div>
+      <div class="card">
+        <h4>🟢 Node.js + Express</h4>
+        <p>Servidor HTTP leve, cluster nativo para escalar em múltiplos CPUs.</p>
+      </div>
+      <div class="card">
+        <h4>🗄️ SQLite</h4>
+        <p>Banco embarcado, sem dependências externas. Ideal para escala pequena e demonstrações.</p>
+      </div>
+      <div class="card">
+        <h4>🧪 Vitest</h4>
+        <p>Runner de testes moderno com suporte nativo a ESM. Rápido e compatível com Vite.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 10: Próximos passos -->
+  <div class="slide">
+    <div class="tag">Próximos Passos</div>
+    <h2>O que ainda pode ser feito</h2>
+    <div class="divider"></div>
+    <ul class="items">
+      <li><span class="icon">🏠</span><span><strong>Salas / canais</strong> — criar ou entrar em salas separadas com <code>socket.join()</code></span></li>
+      <li><span class="icon">😄</span><span><strong>Reações a mensagens</strong> — adicionar emojis de reação inline</span></li>
+      <li><span class="icon">🔍</span><span><strong>Busca no histórico</strong> — pesquisar mensagens passadas por palavra-chave</span></li>
+      <li><span class="icon">🚦</span><span><strong>Rate limiting</strong> — bloquear flood de mensagens por cliente</span></li>
+      <li><span class="icon">📁</span><span><strong>Envio de arquivos / imagens</strong> — upload com pré-visualização inline</span></li>
+      <li><span class="icon">🔐</span><span><strong>Autenticação</strong> — login com JWT para sessões persistentes e seguras</span></li>
+    </ul>
+  </div>
+
+</div>
+
+<div id="progress"><div id="progress-bar"></div></div>
+
+<div id="nav">
+  <button id="btn-prev" disabled>← Anterior</button>
+  <span id="slide-counter">1 / 10</span>
+  <button id="btn-next">Próximo →</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const progressBar = document.getElementById('progress-bar');
+  const counter = document.getElementById('slide-counter');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const total = slides.length;
+  let current = 0;
+
+  function go(n) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, total - 1));
+    slides[current].classList.add('active');
+    progressBar.style.width = ((current + 1) / total * 100) + '%';
+    counter.textContent = `${current + 1} / ${total}`;
+    btnPrev.disabled = current === 0;
+    btnNext.disabled = current === total - 1;
+  }
+
+  btnPrev.addEventListener('click', () => go(current - 1));
+  btnNext.addEventListener('click', () => go(current + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(current + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(current - 1);
+  });
+
+  go(0);
+</script>
+</body>
+</html>
