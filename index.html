@@ -4,46 +4,108 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Socket.IO chat</title>
   <style>
-      body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; }
 
-      #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; min-height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
-      #input { border: none; padding: 0.5rem 1rem; flex-grow: 1; border-radius: 1rem; margin: 0.25rem; resize: none; font-family: inherit; font-size: 1rem; line-height: 1.4; max-height: 8rem; overflow-y: auto; }
-      #input:focus { outline: none; }
-      #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; height: 2.5rem; }
-      #char-count { font-size: 0.72rem; color: #888; padding: 0 0.4rem; white-space: nowrap; }
-      #char-count.warn { color: #e07b00; }
-      #char-count.danger { color: #c0392b; }
+    /* Top bar */
+    #topbar { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 1rem; background: #2c2c2c; color: #fff; font-size: 0.85rem; flex-shrink: 0; }
+    #user-count { color: #aaa; }
 
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages > li { padding: 0.5rem 1rem; }
-      #messages > li:nth-child(odd) { background: #efefef; }
-      .username { font-weight: bold; margin-right: 0.4rem; }
-      .timestamp { font-size: 0.72rem; color: #aaa; margin-left: 0.5rem; }
-      #typing { padding: 0.25rem 1rem; font-size: 0.8rem; color: #888; min-height: 1.2rem; }
-      #user-count { padding: 0.4rem 1rem; font-size: 0.8rem; color: #555; background: #f5f5f5; border-bottom: 1px solid #ddd; }
-      .system-msg { text-align: center; font-size: 0.78rem; color: #999; font-style: italic; padding: 0.3rem 0; }
+    /* Layout */
+    #layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* Sidebar */
+    #sidebar { width: 200px; border-right: 1px solid #ddd; display: flex; flex-direction: column; background: #fafafa; flex-shrink: 0; }
+    #sidebar h3 { margin: 0; padding: 0.6rem 1rem; font-size: 0.8rem; text-transform: uppercase; color: #888; border-bottom: 1px solid #eee; }
+    #user-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+    #user-list li { padding: 0.5rem 1rem; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; }
+    #user-list li:hover { background: #f0f0f0; }
+    #user-list li.self { color: #888; cursor: default; }
+    #user-list li .dot { width: 8px; height: 8px; border-radius: 50%; background: #27ae60; flex-shrink: 0; }
+
+    /* Main chat area */
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #chat-header { padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: bold; border-bottom: 1px solid #eee; background: #fff; flex-shrink: 0; }
+
+    #messages-wrap { flex: 1; overflow-y: auto; padding-bottom: 0.5rem; }
+    #messages { list-style-type: none; margin: 0; padding: 0; }
+    #messages > li { padding: 0.4rem 1rem; }
+    #messages > li:nth-child(odd) { background: #f9f9f9; }
+    .username { font-weight: bold; margin-right: 0.4rem; }
+    .timestamp { font-size: 0.72rem; color: #aaa; margin-left: 0.5rem; }
+    .system-msg { text-align: center; font-size: 0.78rem; color: #bbb; font-style: italic; padding: 0.3rem 0; }
+    #typing { padding: 0.2rem 1rem; font-size: 0.78rem; color: #888; min-height: 1.2rem; flex-shrink: 0; }
+
+    /* Input bar */
+    #form { background: rgba(0,0,0,0.07); padding: 0.4rem; display: flex; align-items: flex-end; gap: 0.25rem; flex-shrink: 0; }
+    #input { border: 1px solid #ccc; padding: 0.5rem 0.8rem; flex-grow: 1; border-radius: 0.8rem; font-family: inherit; font-size: 0.95rem; line-height: 1.4; resize: none; max-height: 8rem; overflow-y: auto; background: #fff; }
+    #input:focus { outline: none; border-color: #888; }
+    #form button { background: #333; border: none; padding: 0 1rem; border-radius: 6px; color: #fff; height: 2.2rem; cursor: pointer; font-size: 0.9rem; }
+    #char-count { font-size: 0.72rem; color: #aaa; white-space: nowrap; align-self: center; }
+    #char-count.warn { color: #e07b00; }
+    #char-count.danger { color: #c0392b; }
+
+    /* Private message panel */
+    #pm-panel { display: none; position: fixed; bottom: 5rem; right: 1rem; width: 300px; background: #fff; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); flex-direction: column; z-index: 100; }
+    #pm-panel.open { display: flex; }
+    #pm-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.8rem; background: #2c2c2c; color: #fff; border-radius: 8px 8px 0 0; font-size: 0.85rem; }
+    #pm-header button { background: none; border: none; color: #fff; cursor: pointer; font-size: 1rem; }
+    #pm-messages { list-style: none; margin: 0; padding: 0.5rem; max-height: 200px; overflow-y: auto; font-size: 0.85rem; }
+    #pm-messages li { margin-bottom: 0.3rem; }
+    #pm-messages .pm-from { font-weight: bold; margin-right: 0.3rem; }
+    #pm-form { display: flex; border-top: 1px solid #eee; padding: 0.4rem; gap: 0.3rem; }
+    #pm-input { flex: 1; border: 1px solid #ccc; border-radius: 4px; padding: 0.3rem 0.5rem; font-size: 0.85rem; }
+    #pm-form button { background: #333; color: #fff; border: none; border-radius: 4px; padding: 0 0.6rem; cursor: pointer; }
   </style>
 </head>
 <body>
-  <div id="user-count"></div>
-  <ul id="messages"></ul>
-  <div id="typing"></div>
-  <form id="form" action="">
-    <textarea id="input" autocomplete="off" placeholder="Mensagem... (Enter para enviar, Shift+Enter para nova linha)" rows="1"></textarea>
-    <span id="char-count">500</span>
-    <button type="submit">Enviar</button>
-  </form>
+  <div id="topbar">
+    <strong>Chat</strong>
+    <span id="user-count"></span>
+  </div>
+
+  <div id="layout">
+    <aside id="sidebar">
+      <h3>Online</h3>
+      <ul id="user-list"></ul>
+    </aside>
+
+    <div id="main">
+      <div id="chat-header">Chat geral</div>
+      <div id="messages-wrap">
+        <ul id="messages"></ul>
+      </div>
+      <div id="typing"></div>
+      <form id="form" action="">
+        <textarea id="input" autocomplete="off" placeholder="Mensagem... (Enter envia, Shift+Enter nova linha)" rows="1"></textarea>
+        <span id="char-count">500</span>
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Private message panel -->
+  <div id="pm-panel">
+    <div id="pm-header">
+      <span id="pm-title">Mensagem privada</span>
+      <button id="pm-close">&times;</button>
+    </div>
+    <ul id="pm-messages"></ul>
+    <form id="pm-form">
+      <input id="pm-input" autocomplete="off" placeholder="Mensagem..." />
+      <button type="submit">&#9654;</button>
+    </form>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     let counter = 0;
+    const MAX = 500;
 
     const username = (prompt('Seu nome:') || 'Anônimo').trim().slice(0, 30);
 
     const socket = io({
-      auth: {
-        serverOffset: 0,
-        username
-      },
+      auth: { serverOffset: 0, username },
       ackTimeout: 10000,
       retries: 3,
     });
@@ -54,9 +116,19 @@
     const typingEl = document.getElementById('typing');
     const userCountEl = document.getElementById('user-count');
     const charCountEl = document.getElementById('char-count');
+    const userListEl = document.getElementById('user-list');
 
-    const MAX = 500;
+    // Private message elements
+    const pmPanel = document.getElementById('pm-panel');
+    const pmTitle = document.getElementById('pm-title');
+    const pmMessages = document.getElementById('pm-messages');
+    const pmForm = document.getElementById('pm-form');
+    const pmInput = document.getElementById('pm-input');
+    const pmClose = document.getElementById('pm-close');
+    let pmTargetId = null;
+    let pmTargetName = null;
 
+    // ---- Char counter & auto-resize ----
     function updateCharCount() {
       const remaining = MAX - input.value.length;
       charCountEl.textContent = remaining;
@@ -68,6 +140,7 @@
       input.style.height = Math.min(input.scrollHeight, 128) + 'px';
     }
 
+    // ---- Send message ----
     function sendMessage() {
       const msg = input.value;
       if (msg.trim()) {
@@ -80,18 +153,6 @@
         autoResize();
       }
     }
-
-    socket.on('system message', (text) => {
-      const item = document.createElement('li');
-      item.className = 'system-msg';
-      item.textContent = text;
-      messages.appendChild(item);
-      window.scrollTo(0, document.body.scrollHeight);
-    });
-
-    socket.on('user count', (count) => {
-      userCountEl.textContent = count === 1 ? '1 usuário online' : `${count} usuários online`;
-    });
 
     let typingTimeout;
     input.addEventListener('input', () => {
@@ -114,6 +175,41 @@
       sendMessage();
     });
 
+    // ---- System messages ----
+    socket.on('system message', (text) => {
+      const item = document.createElement('li');
+      item.className = 'system-msg';
+      item.textContent = text;
+      messages.appendChild(item);
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+
+    // ---- User count ----
+    socket.on('user count', (count) => {
+      userCountEl.textContent = count === 1 ? '1 online' : `${count} online`;
+    });
+
+    // ---- Online users list ----
+    socket.on('online users', (users) => {
+      userListEl.innerHTML = '';
+      users.forEach(({ id, name }) => {
+        const li = document.createElement('li');
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        li.appendChild(dot);
+        li.appendChild(document.createTextNode(name));
+        if (id === socket.id) {
+          li.classList.add('self');
+          li.title = 'Você';
+        } else {
+          li.title = `Mensagem privada para ${name}`;
+          li.addEventListener('click', () => openPM(id, name));
+        }
+        userListEl.appendChild(li);
+      });
+    });
+
+    // ---- Chat messages ----
     const typingUsers = new Set();
     socket.on('typing', (user) => {
       typingUsers.add(user);
@@ -138,8 +234,50 @@
         item.appendChild(ts);
       }
       messages.appendChild(item);
-      window.scrollTo(0, document.body.scrollHeight);
+      document.getElementById('messages-wrap').scrollTop = document.getElementById('messages-wrap').scrollHeight;
       socket.auth.serverOffset = serverOffset;
+    });
+
+    // ---- Private messages ----
+    function openPM(id, name) {
+      pmTargetId = id;
+      pmTargetName = name;
+      pmTitle.textContent = `Privado: ${name}`;
+      pmPanel.classList.add('open');
+      pmInput.focus();
+    }
+
+    pmClose.addEventListener('click', () => {
+      pmPanel.classList.remove('open');
+      pmTargetId = null;
+    });
+
+    pmForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const msg = pmInput.value.trim();
+      if (msg && pmTargetId) {
+        socket.emit('private message', pmTargetId, msg);
+        pmInput.value = '';
+      }
+    });
+
+    socket.on('private message', (peerId, fromName, msg) => {
+      const isMe = fromName === username;
+      const li = document.createElement('li');
+      const sender = document.createElement('span');
+      sender.className = 'pm-from';
+      sender.textContent = isMe ? 'Você:' : fromName + ':';
+      li.appendChild(sender);
+      li.appendChild(document.createTextNode(msg));
+      pmMessages.appendChild(li);
+
+      const targetId = isMe ? peerId : peerId;
+      const targetName = isMe ? pmTargetName : fromName;
+
+      if (!isMe && !pmPanel.classList.contains('open')) {
+        openPM(peerId, fromName);
+      }
+      pmMessages.scrollTop = pmMessages.scrollHeight;
     });
   </script>
 </body>
