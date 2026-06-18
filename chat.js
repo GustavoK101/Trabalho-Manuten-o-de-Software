@@ -1,7 +1,10 @@
+import { logError } from './logger.js';
+
 export function registerChatHandlers(io, socket, db) {
   const username = socket.handshake.auth.username?.trim().slice(0, 30) || 'Anônimo';
 
   socket.on('chat message', async (msg, clientOffset, callback) => {
+    if (typeof callback !== 'function') callback = () => {};
     if (typeof msg !== 'string' || msg.trim().length === 0 || msg.length > 500) {
       return callback({ error: 'invalid message' });
     }
@@ -18,7 +21,7 @@ export function registerChatHandlers(io, socket, db) {
       if (e.code === 'SQLITE_CONSTRAINT') {
         callback();
       } else {
-        console.error('DB insert error:', e);
+        logError('[chat] DB insert error:', e);
       }
       return;
     }
@@ -51,6 +54,6 @@ async function recoverMessages(socket, db) {
       }
     );
   } catch (e) {
-    console.error('Message recovery error:', e);
+    logError('[recover] message recovery error:', e);
   }
 }

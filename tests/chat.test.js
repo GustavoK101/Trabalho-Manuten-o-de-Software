@@ -56,8 +56,15 @@ function connect(auth = {}) {
   });
 }
 
-function waitFor(socket, event) {
-  return new Promise((resolve) => socket.once(event, (...args) => resolve(args)));
+function waitFor(socket, event, predicate) {
+  return new Promise((resolve) => {
+    const handler = (...args) => {
+      if (predicate && !predicate(...args)) return;
+      socket.off(event, handler);
+      resolve(args);
+    };
+    socket.on(event, handler);
+  });
 }
 
 describe('chat message', () => {
@@ -176,7 +183,7 @@ describe('system messages', () => {
     const watcher = connect({ username: 'Watcher' });
     await waitFor(watcher, 'connect');
 
-    const sysPromise = waitFor(watcher, 'system message');
+    const sysPromise = waitFor(watcher, 'system message', (text) => text.includes('Novo'));
     connect({ username: 'Novo' });
     const [text] = await sysPromise;
 
@@ -190,7 +197,7 @@ describe('system messages', () => {
     const leaver = connect({ username: 'Saindo' });
     await Promise.all([waitFor(watcher, 'connect'), waitFor(leaver, 'connect')]);
 
-    const sysPromise = waitFor(watcher, 'system message');
+    const sysPromise = waitFor(watcher, 'system message', (text) => text.includes('saiu'));
     leaver.disconnect();
     const [text] = await sysPromise;
 
