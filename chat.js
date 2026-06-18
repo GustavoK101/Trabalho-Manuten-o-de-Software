@@ -31,12 +31,18 @@ export function registerChatHandlers(io, socket, db) {
     callback();
   });
 
-  socket.on('typing', () => {
+  // Ack these so they don't stall the client's delivery-guarantee queue
+  // (the client runs with `retries`, which sends emits one-at-a-time and
+  // waits for an ack before sending the next — an un-acked event blocks
+  // every emit behind it, including chat messages).
+  socket.on('typing', (callback) => {
     socket.broadcast.emit('typing', username);
+    if (typeof callback === 'function') callback();
   });
 
-  socket.on('stop typing', () => {
+  socket.on('stop typing', (callback) => {
     socket.broadcast.emit('stop typing', username);
+    if (typeof callback === 'function') callback();
   });
 
   if (!socket.recovered) {

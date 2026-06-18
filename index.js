@@ -38,11 +38,19 @@ io.on('connection', (socket) => {
   broadcastPresence();
   io.emit('system message', `${username} entrou no chat`);
 
-  socket.on('private message', (toSocketId, msg) => {
-    if (typeof msg !== 'string' || msg.trim().length === 0 || msg.length > 500) return;
+  socket.on('private message', (toSocketId, msg, callback) => {
+    // Ack so the client (running with `retries`) doesn't resend and deliver
+    // the same private message multiple times.
+    if (typeof callback !== 'function') callback = () => {};
+    if (typeof msg !== 'string' || msg.trim().length === 0 || msg.length > 500) {
+      return callback({ error: 'invalid message' });
+    }
     const fromName = onlineUsers.get(socket.id) || 'Anônimo';
-    socket.to(toSocketId).emit('private message', socket.id, fromName, msg);
-    socket.emit('private message', toSocketId, fromName, msg);
+    // Last arg flags whether the recipient is the sender (echo) so the client
+    // doesn't have to guess direction from the (non-unique) display name.
+    socket.to(toSocketId).emit('private message', socket.id, fromName, msg, false);
+    socket.emit('private message', toSocketId, fromName, msg, true);
+    callback();
   });
 
   registerChatHandlers(io, socket, db);

@@ -24,11 +24,15 @@ beforeAll(async () => {
     ioServer.emit('system message', `${username} entrou no chat`);
     ioServer.emit('online users', Array.from(onlineUsers.entries()).map(([id, name]) => ({ id, name })));
 
-    socket.on('private message', (toSocketId, msg) => {
-      if (typeof msg !== 'string' || msg.trim().length === 0 || msg.length > 500) return;
+    socket.on('private message', (toSocketId, msg, callback) => {
+      if (typeof callback !== 'function') callback = () => {};
+      if (typeof msg !== 'string' || msg.trim().length === 0 || msg.length > 500) {
+        return callback({ error: 'invalid message' });
+      }
       const fromName = onlineUsers.get(socket.id) || 'Anônimo';
-      socket.to(toSocketId).emit('private message', socket.id, fromName, msg);
-      socket.emit('private message', toSocketId, fromName, msg);
+      socket.to(toSocketId).emit('private message', socket.id, fromName, msg, false);
+      socket.emit('private message', toSocketId, fromName, msg, true);
+      callback();
     });
 
     registerChatHandlers(ioServer, socket, db);

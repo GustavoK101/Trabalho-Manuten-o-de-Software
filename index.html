@@ -261,8 +261,8 @@
       }
     });
 
-    socket.on('private message', (peerId, fromName, msg) => {
-      const isMe = fromName === username;
+    socket.on('private message', (peerId, fromName, msg, self) => {
+      const isMe = !!self;
       const li = document.createElement('li');
       const sender = document.createElement('span');
       sender.className = 'pm-from';
@@ -270,9 +270,6 @@
       li.appendChild(sender);
       li.appendChild(document.createTextNode(msg));
       pmMessages.appendChild(li);
-
-      const targetId = isMe ? peerId : peerId;
-      const targetName = isMe ? pmTargetName : fromName;
 
       if (!isMe && !pmPanel.classList.contains('open')) {
         openPM(peerId, fromName);
